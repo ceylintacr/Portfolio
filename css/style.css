@@ -264,6 +264,13 @@ nav {
 
 .nav-actions { display: flex; align-items: center; gap: 10px; }
 
+.lang-toggle {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+.lang-toggle:hover { transform: none; background: var(--color-bg-soft); }
+
 .theme-toggle .icon-moon { display: none; }
 [data-theme="dark"] .theme-toggle .icon-sun { display: none; }
 [data-theme="dark"] .theme-toggle .icon-moon { display: block; }

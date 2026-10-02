@@ -1,19 +1,19 @@
 "use strict";
 
 const SITE = window.SITE;
+const I18N = window.I18N;
 const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 const finePointer = window.matchMedia("(pointer: fine)").matches;
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
-const CATEGORIES = {
-    oyun: { label: "Oyun", c1: "#8fb4e6", c2: "#3a6db5" },
-    masaustu: { label: "Masaüstü", c1: "#e8c39e", c2: "#c8805a" },
-    veri: { label: "Veri & Algoritma", c1: "#9fd6d2", c2: "#2f8a8a" },
-    web: { label: "Web", c1: "#e5b3a7", c2: "#b4624f" }
+const CATEGORY_COLORS = {
+    oyun: { c1: "#8fb4e6", c2: "#3a6db5" },
+    masaustu: { c1: "#e8c39e", c2: "#c8805a" },
+    veri: { c1: "#9fd6d2", c2: "#2f8a8a" },
+    web: { c1: "#e5b3a7", c2: "#b4624f" }
 };
-
 
 const ICONS = {
     email: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>',
@@ -27,30 +27,75 @@ function esc(str) {
 }
 
 /* ===========================
-   KİŞİSEL BİLGİLER
+   DİL (TR / EN)
 =========================== */
-(function profileModule() {
-    const firstName = SITE.name.split(" ")[0];
+const LANGS = ["tr", "en"];
+const LANG_KEY = "portfolio-lang";
+
+let lang = (function initialLang() {
+    const fromUrl = new URLSearchParams(location.search).get("lang");
+    if (LANGS.includes(fromUrl)) return fromUrl;
+    try {
+        const stored = localStorage.getItem(LANG_KEY);
+        if (LANGS.includes(stored)) return stored;
+    } catch (e) { /* gizli sekme */ }
+    return (navigator.language || "tr").toLowerCase().startsWith("tr") ? "tr" : "en";
+})();
+
+// Arayüz metni: t("anahtar", { name: "..." })
+function t(key, vars = {}) {
+    const str = (I18N[lang] && I18N[lang][key]) ?? I18N.tr[key] ?? key;
+    return str.replace(/\{(\w+)\}/g, (_, v) => vars[v] ?? "");
+}
+
+// İçerik metni: { tr, en } nesnesi ya da düz metin
+function L(value) {
+    if (value && typeof value === "object" && !Array.isArray(value)) return value[lang] ?? value.tr;
+    return value;
+}
+
+const categoryLabel = (cat) => t("cat_" + cat);
+
+/* ===========================
+   SABİT METİNLER + KİŞİSEL BİLGİLER
+=========================== */
+function applyStaticText() {
+    document.documentElement.lang = lang;
+    document.title = `${SITE.name} | ${t("pageTitle")}`;
+
+    $$("[data-i18n]").forEach(el => { el.textContent = t(el.dataset.i18n); });
+    $$("[data-i18n-attr]").forEach(el => {
+        el.dataset.i18nAttr.split(";").forEach(pair => {
+            const [attr, key] = pair.split(":");
+            el.setAttribute(attr.trim(), t(key.trim()));
+        });
+    });
 
     $$("[data-name]").forEach(el => { el.textContent = SITE.name; });
+    $$("[data-role]").forEach(el => { el.textContent = L(SITE.role); });
+    $("#profileImg").alt = t("photoAlt", { name: SITE.name });
+
+    const cv = L(SITE.cv);
+    const cvBtn = $("#cvButton");
+    cvBtn.hidden = !cv;
+    if (cv) cvBtn.href = cv;
+
+    $("#langToggle").textContent = lang === "tr" ? "EN" : "TR";
+}
+
+(function profileModule() {
+    const firstName = SITE.name.split(" ")[0];
     $$("[data-name-logo]").forEach(el => { el.innerHTML = esc(firstName) + "<span>.</span>"; });
-    $$("[data-role]").forEach(el => { el.textContent = SITE.role; });
-    $$("[data-location]").forEach(el => { el.textContent = SITE.location.split(",")[0]; });
-    document.title = `${SITE.name} | Portfolyo`;
 
     // Fotoğraf: yoksa baş harf görünür
     const img = $("#profileImg");
     const initial = $("#profileInitial");
     initial.textContent = firstName.charAt(0).toLocaleUpperCase("tr");
-    img.alt = `${SITE.name} fotoğrafı`;
     img.hidden = true;
     if (SITE.photo) {
         img.addEventListener("load", () => { img.hidden = false; initial.hidden = true; });
         img.src = SITE.photo;
     }
-
-    const cvBtn = $("#cvButton");
-    if (SITE.cv) { cvBtn.href = SITE.cv; cvBtn.hidden = false; }
 
     const repos = $("[data-github-repos]");
     if (repos && SITE.social.github) repos.href = SITE.social.github + "?tab=repositories";
@@ -61,44 +106,51 @@ function esc(str) {
 /* ===========================
    İÇERİĞİ OLUŞTUR
 =========================== */
-(function renderModule() {
-    // Yetenekler
-    $("#skillsList").innerHTML = SITE.skills.map(s => `<li class="skill">${esc(s)}</li>`).join("");
+function thumb(p) {
+    if (p.image) return `<img src="${esc(p.image)}" alt="${esc(t("screenshotAlt", { title: L(p.title) }))}" loading="lazy" />`;
+    const c = CATEGORY_COLORS[p.category] || CATEGORY_COLORS.web;
+    return `<div class="thumb-art" style="--c1:${c.c1};--c2:${c.c2}"><span aria-hidden="true">${p.icon || "💻"}</span></div>`;
+}
 
-    // Projeler
+function renderContent() {
+    // Yetenekler
+    $("#skillsList").innerHTML = SITE.skills.map(s => `<li class="skill">${esc(L(s))}</li>`).join("");
+
+    // Projeler (seçili filtre korunur)
+    const activeFilter = ($(".filter.active") || {}).dataset?.filter || "all";
     $("#projectsGrid").innerHTML = SITE.projects.map((p, i) => {
-        const cat = CATEGORIES[p.category] || CATEGORIES.web;
+        const hidden = activeFilter !== "all" && p.category !== activeFilter;
         return `
-        <button class="project-card card" data-index="${i}" data-category="${esc(p.category)}" aria-label="${esc(p.title)} detaylarını aç">
+        <button class="project-card card${hidden ? " hide" : ""}" data-index="${i}" data-category="${esc(p.category)}" aria-label="${esc(t("openDetails", { title: L(p.title) }))}">
             <div class="project-thumb">
                 ${thumb(p)}
-                ${p.demo ? '<span class="badge live">Canlı</span>' : ""}
+                ${p.demo ? `<span class="badge live">${esc(t("live"))}</span>` : ""}
             </div>
             <div class="project-info">
-                <span class="project-cat">${esc(cat.label)}</span>
-                <h3>${esc(p.title)}</h3>
-                <p>${esc(p.short)}</p>
-                <ul class="tags">${p.tech.map(t => `<li>${esc(t)}</li>`).join("")}</ul>
+                <span class="project-cat">${esc(categoryLabel(p.category))}</span>
+                <h3>${esc(L(p.title))}</h3>
+                <p>${esc(L(p.short))}</p>
+                <ul class="tags">${p.tech.map(x => `<li>${esc(L(x))}</li>`).join("")}</ul>
             </div>
         </button>`;
     }).join("");
 
     // Yolculuk
-    $("#timeline").innerHTML = SITE.timeline.map(t => `
+    $("#timeline").innerHTML = SITE.timeline.map(item => `
         <li class="timeline-item card">
-            <span class="timeline-date">${esc(t.date)}</span>
-            <h3>${esc(t.title)}</h3>
-            <p class="timeline-place">${esc(t.place)}</p>
-            ${t.text ? `<p>${esc(t.text)}</p>` : ""}
+            <span class="timeline-date">${esc(L(item.date))}</span>
+            <h3>${esc(L(item.title))}</h3>
+            <p class="timeline-place">${esc(L(item.place))}</p>
+            ${item.text ? `<p>${esc(L(item.text))}</p>` : ""}
         </li>`).join("");
 
     // İletişim kartları
     const s = SITE.social;
     const cards = [
-        s.email && { icon: ICONS.email, label: "E-posta", value: s.email, href: "mailto:" + s.email },
+        s.email && { icon: ICONS.email, label: t("labelEmail"), value: s.email, href: "mailto:" + s.email },
         s.github && { icon: ICONS.github, label: "GitHub", value: s.github.replace(/^https?:\/\//, ""), href: s.github },
         s.linkedin && { icon: ICONS.linkedin, label: "LinkedIn", value: SITE.name, href: s.linkedin },
-        SITE.location && { icon: ICONS.location, label: "Konum", value: SITE.location }
+        SITE.location && { icon: ICONS.location, label: t("labelLocation"), value: L(SITE.location) }
     ].filter(Boolean);
 
     $("#contactCards").innerHTML = cards.map(c => {
@@ -109,13 +161,33 @@ function esc(str) {
             <span><small>${esc(c.label)}</small><strong>${esc(c.value)}</strong></span>
         </${tag}>`;
     }).join("");
-})();
-
-function thumb(p) {
-    if (p.image) return `<img src="${esc(p.image)}" alt="${esc(p.title)} ekran görüntüsü" loading="lazy" />`;
-    const cat = CATEGORIES[p.category] || CATEGORIES.web;
-    return `<div class="thumb-art" style="--c1:${cat.c1};--c2:${cat.c2}"><span aria-hidden="true">${p.icon || "💻"}</span></div>`;
 }
+
+applyStaticText();
+renderContent();
+
+/* ===========================
+   DİL DEĞİŞTİRME
+=========================== */
+const langListeners = [];
+
+function setLang(next) {
+    if (next === lang) return;
+    lang = next;
+    try { localStorage.setItem(LANG_KEY, lang); } catch (e) { /* gizli sekme */ }
+
+    // Paylaşılabilir adres: İngilizcede ?lang=en
+    const url = new URL(location.href);
+    if (lang === "en") url.searchParams.set("lang", "en");
+    else url.searchParams.delete("lang");
+    history.replaceState(null, "", url);
+
+    applyStaticText();
+    renderContent();
+    langListeners.forEach(fn => fn());
+}
+
+$("#langToggle").addEventListener("click", () => setLang(lang === "tr" ? "en" : "tr"));
 
 /* ===========================
    TEMA (AÇIK / KOYU)
@@ -152,8 +224,10 @@ function thumb(p) {
         links.classList.toggle("open", open);
         toggle.classList.toggle("open", open);
         toggle.setAttribute("aria-expanded", String(open));
-        toggle.setAttribute("aria-label", open ? "Menüyü kapat" : "Menüyü aç");
+        toggle.setAttribute("aria-label", t(open ? "menuClose" : "menuOpen"));
     };
+    setOpen(false);
+    langListeners.push(() => setOpen(links.classList.contains("open")));
 
     toggle.addEventListener("click", () => setOpen(!links.classList.contains("open")));
     $$("a", links).forEach(a => a.addEventListener("click", () => setOpen(false)));
@@ -203,22 +277,30 @@ function thumb(p) {
 =========================== */
 (function typingModule() {
     const el = $("#typed");
-    const words = SITE.typing;
-    if (!el || !words.length) return;
+    if (!el) return;
+    let timer = null;
 
-    if (reduceMotion) { el.textContent = words[0]; return; }
+    function start() {
+        clearTimeout(timer);
+        const words = L(SITE.typing) || [];
+        if (!words.length) return;
+        if (reduceMotion) { el.textContent = words[0]; return; }
 
-    let w = 0, c = 0, deleting = false;
-    (function tick() {
-        const word = words[w];
-        c += deleting ? -1 : 1;
-        el.textContent = word.slice(0, c);
+        let w = 0, c = 0, deleting = false;
+        (function tick() {
+            const word = words[w];
+            c += deleting ? -1 : 1;
+            el.textContent = word.slice(0, c);
 
-        let delay = deleting ? 35 : 70;
-        if (!deleting && c === word.length) { deleting = true; delay = 1800; }
-        else if (deleting && c === 0) { deleting = false; w = (w + 1) % words.length; delay = 350; }
-        setTimeout(tick, delay);
-    })();
+            let delay = deleting ? 35 : 70;
+            if (!deleting && c === word.length) { deleting = true; delay = 1800; }
+            else if (deleting && c === 0) { deleting = false; w = (w + 1) % words.length; delay = 350; }
+            timer = setTimeout(tick, delay);
+        })();
+    }
+
+    start();
+    langListeners.push(start);
 })();
 
 /* ===========================
@@ -237,14 +319,19 @@ function thumb(p) {
         btn.addEventListener("mouseleave", () => { btn.style.transform = ""; });
     });
 
-    $$(".project-card").forEach(card => {
-        card.addEventListener("mousemove", e => {
-            const r = card.getBoundingClientRect();
-            const px = (e.clientX - r.left) / r.width - 0.5;
-            const py = (e.clientY - r.top) / r.height - 0.5;
-            card.style.transform = `rotateX(${py * -7}deg) rotateY(${px * 7}deg) translateY(-6px)`;
-        });
-        card.addEventListener("mouseleave", () => { card.style.transform = ""; });
+    // Kartlar dil değişince yeniden oluşturulduğu için olay grid'e bağlanır
+    const grid = $("#projectsGrid");
+    grid.addEventListener("mousemove", e => {
+        const card = e.target.closest(".project-card");
+        if (!card) return;
+        const r = card.getBoundingClientRect();
+        const px = (e.clientX - r.left) / r.width - 0.5;
+        const py = (e.clientY - r.top) / r.height - 0.5;
+        card.style.transform = `rotateX(${py * -7}deg) rotateY(${px * 7}deg) translateY(-6px)`;
+    });
+    grid.addEventListener("mouseout", e => {
+        const card = e.target.closest(".project-card");
+        if (card && !card.contains(e.relatedTarget)) card.style.transform = "";
     });
 })();
 
@@ -253,7 +340,6 @@ function thumb(p) {
 =========================== */
 (function filterModule() {
     const buttons = $$(".filter");
-    const cards = $$(".project-card");
 
     buttons.forEach(btn => btn.addEventListener("click", () => {
         const f = btn.dataset.filter;
@@ -262,7 +348,7 @@ function thumb(p) {
             b.classList.toggle("active", on);
             b.setAttribute("aria-selected", String(on));
         });
-        cards.forEach(card => {
+        $$(".project-card").forEach(card => {
             const show = f === "all" || card.dataset.category === f;
             card.classList.toggle("hide", !show);
             if (show && !reduceMotion) {
@@ -279,21 +365,24 @@ function thumb(p) {
 (function modalModule() {
     const modal = $("#projectModal");
     let lastFocus = null;
+    let current = -1;
+
+    function fill(i) {
+        const p = SITE.projects[i];
+        $("#modalMedia").innerHTML = thumb(p);
+        $("#modalCat").textContent = categoryLabel(p.category);
+        $("#modalTitle").textContent = L(p.title);
+        $("#modalDesc").textContent = L(p.description);
+        $("#modalTech").innerHTML = p.tech.map(x => `<li>${esc(L(x))}</li>`).join("");
+        $("#modalActions").innerHTML = [
+            p.demo && `<a class="btn btn-primary" href="${esc(p.demo)}" target="_blank" rel="noopener">${esc(t("liveDemo"))}</a>`,
+            p.github && `<a class="btn btn-outline" href="${esc(p.github)}" target="_blank" rel="noopener">${esc(t("viewGithub"))}</a>`
+        ].filter(Boolean).join("");
+    }
 
     function open(i) {
-        const p = SITE.projects[i];
-        const cat = CATEGORIES[p.category] || CATEGORIES.web;
-
-        $("#modalMedia").innerHTML = thumb(p);
-        $("#modalCat").textContent = cat.label;
-        $("#modalTitle").textContent = p.title;
-        $("#modalDesc").textContent = p.description;
-        $("#modalTech").innerHTML = p.tech.map(t => `<li>${esc(t)}</li>`).join("");
-        $("#modalActions").innerHTML = [
-            p.demo && `<a class="btn btn-primary" href="${esc(p.demo)}" target="_blank" rel="noopener">Canlı Demo ↗</a>`,
-            p.github && `<a class="btn btn-outline" href="${esc(p.github)}" target="_blank" rel="noopener">GitHub'da İncele</a>`
-        ].filter(Boolean).join("");
-
+        current = i;
+        fill(i);
         lastFocus = document.activeElement;
         modal.hidden = false;
         document.body.classList.add("modal-open");
@@ -301,10 +390,13 @@ function thumb(p) {
     }
 
     function close() {
+        current = -1;
         modal.hidden = true;
         document.body.classList.remove("modal-open");
-        if (lastFocus) lastFocus.focus();
+        if (lastFocus && document.contains(lastFocus)) lastFocus.focus();
     }
+
+    langListeners.push(() => { if (current >= 0) fill(current); });
 
     $("#projectsGrid").addEventListener("click", e => {
         const card = e.target.closest(".project-card");
@@ -330,8 +422,16 @@ function thumb(p) {
    SCROLL-REVEAL
 =========================== */
 (function revealModule() {
-    const targets = $$("section:not(#hero) h2, .section-subtitle, .about-block, .skill, .filters, .project-card, .timeline-item, .contact-card, .contact-form");
+    const SELECTOR = "section:not(#hero) h2, .section-subtitle, .about-block, .skill, .filters, .project-card, .timeline-item, .contact-card, .contact-form";
+    const targets = $$(SELECTOR);
     targets.forEach(el => el.classList.add("reveal"));
+
+    // Dil değişince yeniden oluşan öğeler animasyonsuz, doğrudan görünür gelsin
+    langListeners.push(() => {
+        $$(SELECTOR).forEach(el => {
+            if (!el.classList.contains("reveal")) el.classList.add("reveal", "in-view");
+        });
+    });
 
     if (reduceMotion || !("IntersectionObserver" in window)) {
         targets.forEach(el => el.classList.add("in-view"));
@@ -364,7 +464,14 @@ function thumb(p) {
     const submit = $("#contactSubmit");
     const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-    const setStatus = (msg, type = "") => { status.textContent = msg; status.className = "form-status " + type; };
+    // Son mesaj anahtar olarak tutulur ki dil değişince o da çevrilsin
+    let lastStatus = null;
+    const setStatus = (key, type = "") => {
+        lastStatus = key ? { key, type } : null;
+        status.textContent = key ? t(key) : "";
+        status.className = "form-status " + type;
+    };
+    langListeners.push(() => { if (lastStatus) setStatus(lastStatus.key, lastStatus.type); });
 
     form.addEventListener("input", e => e.target.closest(".field")?.classList.remove("invalid"));
 
@@ -382,30 +489,31 @@ function thumb(p) {
             form[key].closest(".field").classList.toggle("invalid", !valid);
             if (!valid) ok = false;
         });
-        if (!ok) { setStatus("Lütfen tüm alanları doğru şekilde doldur.", "error"); return; }
+        if (!ok) { setStatus("formInvalid", "error"); return; }
+
+        const subject = t("mailSubject", { name: data.name });
 
         // Formspree adresi yoksa ziyaretçinin e-posta uygulamasını aç
         if (!SITE.formEndpoint) {
-            const subject = encodeURIComponent(`Portfolyo üzerinden mesaj — ${data.name}`);
             const body = encodeURIComponent(`${data.message}\n\n— ${data.name} (${data.email})`);
-            window.location.href = `mailto:${SITE.social.email}?subject=${subject}&body=${body}`;
-            setStatus("E-posta uygulaman açılıyor…", "success");
+            window.location.href = `mailto:${SITE.social.email}?subject=${encodeURIComponent(subject)}&body=${body}`;
+            setStatus("formMailto", "success");
             return;
         }
 
         submit.disabled = true;
-        setStatus("Gönderiliyor…");
+        setStatus("formSending");
         try {
             const res = await fetch(SITE.formEndpoint, {
                 method: "POST",
                 headers: { "Content-Type": "application/json", "Accept": "application/json" },
-                body: JSON.stringify({ ...data, _subject: `Portfolyo mesajı — ${data.name}` })
+                body: JSON.stringify({ ...data, _subject: subject })
             });
             if (!res.ok) throw new Error();
             form.reset();
-            setStatus("Mesajın gönderildi, teşekkürler! En kısa sürede dönüş yapacağım.", "success");
+            setStatus("formSuccess", "success");
         } catch {
-            setStatus("Mesaj gönderilemedi. Lütfen doğrudan e-posta ile ulaş.", "error");
+            setStatus("formError", "error");
         } finally {
             submit.disabled = false;
         }

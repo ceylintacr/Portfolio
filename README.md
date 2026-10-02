@@ -7,6 +7,7 @@ Saf HTML, CSS ve JavaScript ile yazılmış, framework gerektirmeyen kişisel po
 ## Özellikler
 
 - Açık / koyu tema (tercih hatırlanır, sistem temasına uyar)
+- Türkçe / İngilizce dil desteği (tercih hatırlanır; `?lang=en` ile doğrudan İngilizce açılır)
 - Yazı makinesi efektli hero, mıknatıs butonlar, 3D eğilen proje kartları
 - Kategoriye göre filtrelenebilen projeler ve detay penceresi (modal)
 - Yetenekler ve eğitim/deneyim zaman çizelgesi
@@ -16,15 +17,15 @@ Saf HTML, CSS ve JavaScript ile yazılmış, framework gerektirmeyen kişisel po
 
 ## İçeriği düzenleme
 
-Bütün kişisel bilgiler **`js/data.js`** dosyasında: isim, rol, sosyal bağlantılar,
+Bütün kişisel bilgiler **`js/data.js`** dosyasında (çevrilecek metinler `{ tr: "...", en: "..." }` şeklinde), arayüz metinleri **`js/i18n.js`** dosyasında: isim, rol, sosyal bağlantılar,
 yetenekler, projeler ve zaman çizelgesi. Kod yazmadan sadece bu dosyayı düzenlemen yeterli.
 
 | Ne | Nereye |
 |---|---|
 | Profil fotoğrafı | `images/profile.jpg` (kare, en az 600×600 px) |
-| CV | Kök klasördeki `CeylinTugbaAcar_CV.pdf` dosyasını değiştir |
+| CV | Kök klasördeki `CeylinTugbaAcar_CV.pdf` (TR) ve `CeylinTugbaAcar_CV_EN.pdf` (EN) |
 | Proje görseli | `images/projects/` içine koy, projenin `image` alanına yolunu yaz |
-| Hakkımda yazıları | `index.html` içindeki `#about` bölümü |
+| Hakkımda yazıları | `js/i18n.js` içindeki `about1`–`about3` |
 
 ## Yerelde çalıştırma
 
