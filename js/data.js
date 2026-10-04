@@ -59,6 +59,22 @@ window.SITE = {
     // category: "oyun" | "masaustu" | "veri" | "web"
     projects: [
         {
+            title: "VulnLab",
+            category: "web",
+            short: {
+                tr: "SQL Injection, XSS ve IDOR gibi açıkları önce istismar edip sonra kapattığım eğitim laboratuvarı.",
+                en: "A training lab where I exploit flaws like SQL Injection, XSS and IDOR, then fix them."
+            },
+            description: {
+                tr: "Kasıtlı olarak güvenlik açıkları barındıran, eğitim amaçlı bir Flask uygulaması. Her seviyede bir zafiyet önce istismar ediliyor, ardından güvenli sürümü yazılıyor: SQL Injection'a karşı parametreli sorgular, XSS'e karşı otomatik HTML kaçışı, IDOR'a karşı sahiplik kontrolü ve zayıf şifre saklamaya karşı hash'leme. Güvenlik nedeniyle yalnızca yerel bilgisayarda çalışacak şekilde tasarlandı.",
+                en: "A deliberately vulnerable Flask application built for learning. At each level a vulnerability is first exploited, then its secure version is written: parameterized queries against SQL Injection, automatic HTML escaping against XSS, ownership checks against IDOR and password hashing against weak password storage. For safety, it is designed to run only on the local machine."
+            },
+            tech: ["Python", "Flask", "SQLite", "OWASP"],
+            image: "images/projects/vulnlab.webp",
+            github: "https://github.com/ceylintacr/vulnlab-simulator",
+            demo: ""
+        },
+        {
             title: "Sudoku",
             category: "oyun",
             short: {
