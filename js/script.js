@@ -5,6 +5,9 @@ const I18N = window.I18N;
 const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 const finePointer = window.matchMedia("(pointer: fine)").matches;
 
+// CSS'teki --ease-out / --ease-in-out ile aynı eğriler
+const EASE_OUT = "cubic-bezier(0.23, 1, 0.32, 1)";
+
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
@@ -171,8 +174,18 @@ renderContent();
 =========================== */
 const langListeners = [];
 
-function setLang(next) {
-    if (next === lang) return;
+let switchingLang = false;
+
+async function setLang(next) {
+    if (next === lang || switchingLang) return;
+    switchingLang = true;
+
+    // İçerik aniden değişmesin: kısa bir solma, metin değişimi, yeniden belirme
+    const targets = [$("main"), $("footer"), $("#navLinks")].filter(Boolean);
+    const outs = targets.map(el => el.animate([{ opacity: 1 }, { opacity: 0 }],
+        { duration: 150, easing: EASE_OUT, fill: "forwards" }));
+    await Promise.all(outs.map(a => a.finished.catch(() => {})));
+
     lang = next;
     try { localStorage.setItem(LANG_KEY, lang); } catch (e) { /* gizli sekme */ }
 
@@ -185,6 +198,10 @@ function setLang(next) {
     applyStaticText();
     renderContent();
     langListeners.forEach(fn => fn());
+
+    targets.forEach(el => el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 250, easing: EASE_OUT }));
+    outs.forEach(a => a.cancel());
+    switchingLang = false;
 }
 
 $("#langToggle").addEventListener("click", () => setLang(lang === "tr" ? "en" : "tr"));
@@ -249,7 +266,7 @@ $("#langToggle").addEventListener("click", () => setLang(lang === "tr" ? "en" : 
         ticking = false;
         const y = window.scrollY;
         const max = document.documentElement.scrollHeight - window.innerHeight;
-        progress.style.width = (max > 0 ? (y / max) * 100 : 0) + "%";
+        progress.style.transform = `scaleX(${max > 0 ? y / max : 0})`;
         header.classList.toggle("scrolled", y > 20);
         backToTop.classList.toggle("visible", y > 600);
     }
@@ -348,13 +365,19 @@ $("#langToggle").addEventListener("click", () => setLang(lang === "tr" ? "en" : 
             b.classList.toggle("active", on);
             b.setAttribute("aria-selected", String(on));
         });
+        let shown = 0;
         $$(".project-card").forEach(card => {
             const show = f === "all" || card.dataset.category === f;
             card.classList.toggle("hide", !show);
-            if (show && !reduceMotion) {
-                card.animate([{ opacity: 0, transform: "translateY(16px)" }, { opacity: 1, transform: "none" }],
-                    { duration: 450, easing: "cubic-bezier(0.16, 1, 0.3, 1)" });
-            }
+            if (!show) return;
+            const from = reduceMotion ? { opacity: 0 } : { opacity: 0, transform: "translateY(8px)" };
+            const to = reduceMotion ? { opacity: 1 } : { opacity: 1, transform: "none" };
+            card.animate([from, to], {
+                duration: 300,
+                delay: Math.min(shown++, 6) * 40,
+                easing: EASE_OUT,
+                fill: "backwards"
+            });
         });
     }));
 })();
@@ -380,18 +403,26 @@ $("#langToggle").addEventListener("click", () => setLang(lang === "tr" ? "en" : 
         ].filter(Boolean).join("");
     }
 
+    let hideTimer = null;
+
     function open(i) {
+        clearTimeout(hideTimer);
         current = i;
         fill(i);
         lastFocus = document.activeElement;
         modal.hidden = false;
+        modal.getBoundingClientRect();          // başlangıç durumunu çizdir, sonra geçişi başlat
+        modal.setAttribute("data-open", "");
         document.body.classList.add("modal-open");
         $(".modal-close", modal).focus();
     }
 
     function close() {
+        if (current < 0) return;
         current = -1;
-        modal.hidden = true;
+        modal.removeAttribute("data-open");     // açıldığı gibi kapanır (250ms)
+        clearTimeout(hideTimer);
+        hideTimer = setTimeout(() => { modal.hidden = true; }, 260);
         document.body.classList.remove("modal-open");
         if (lastFocus && document.contains(lastFocus)) lastFocus.focus();
     }
@@ -406,7 +437,7 @@ $("#langToggle").addEventListener("click", () => setLang(lang === "tr" ? "en" : 
     modal.addEventListener("click", e => { if (e.target.closest("[data-close]")) close(); });
 
     document.addEventListener("keydown", e => {
-        if (modal.hidden) return;
+        if (current < 0) return;
         if (e.key === "Escape") close();
         if (e.key === "Tab") {
             // Odağı modal içinde tut
@@ -426,15 +457,16 @@ $("#langToggle").addEventListener("click", () => setLang(lang === "tr" ? "en" : 
     const targets = $$(SELECTOR);
     targets.forEach(el => el.classList.add("reveal"));
 
-    // Dil değişince yeniden oluşan öğeler animasyonsuz, doğrudan görünür gelsin
-    langListeners.push(() => {
-        $$(SELECTOR).forEach(el => {
-            if (!el.classList.contains("reveal")) el.classList.add("reveal", "in-view");
-        });
-    });
+    // Dil değişince yeniden oluşan öğelerde reveal sınıfı yok; doğrudan görünür gelirler.
 
-    if (reduceMotion || !("IntersectionObserver" in window)) {
-        targets.forEach(el => el.classList.add("in-view"));
+    // Giriş bitince reveal sınıfları kalkar; kartın kendi geçişleri (eğilme, hover) geri gelir
+    const settle = (el, delay) => setTimeout(() => {
+        el.classList.remove("reveal", "in-view");
+        el.style.transitionDelay = "";
+    }, 650 + delay);
+
+    if (!("IntersectionObserver" in window)) {
+        targets.forEach(el => el.classList.remove("reveal"));
         return;
     }
 
@@ -442,17 +474,27 @@ $("#langToggle").addEventListener("click", () => setLang(lang === "tr" ? "en" : 
         entries.forEach(e => {
             if (!e.isIntersecting) return;
             e.target.classList.add("in-view");
-            // Giriş animasyonu bitince gecikmeyi kaldır; hover efektleri beklemesin
-            setTimeout(() => { e.target.style.transitionDelay = ""; }, 1200);
+            settle(e.target, parseInt(e.target.style.transitionDelay, 10) || 0);
             obs.unobserve(e.target);
         });
     }, { threshold: 0.12, rootMargin: "0px 0px -40px 0px" });
 
     targets.forEach(el => {
         const siblings = [...el.parentElement.children].filter(c => c.classList.contains("reveal"));
-        el.style.transitionDelay = (Math.min(siblings.indexOf(el), 4) * 80) + "ms";
+        el.style.transitionDelay = (Math.min(siblings.indexOf(el), 5) * 60) + "ms";
         obs.observe(el);
     });
+
+    // Yolculuk çizgisi, bölüm görününce bir kez yukarıdan aşağı çizilir
+    const timeline = $("#timeline");
+    if (timeline) {
+        const tlObs = new IntersectionObserver(([entry]) => {
+            if (!entry.isIntersecting) return;
+            timeline.classList.add("drawn");
+            tlObs.disconnect();
+        }, { threshold: 0.2 });
+        tlObs.observe(timeline);
+    }
 })();
 
 /* ===========================
@@ -466,12 +508,16 @@ $("#langToggle").addEventListener("click", () => setLang(lang === "tr" ? "en" : 
 
     // Son mesaj anahtar olarak tutulur ki dil değişince o da çevrilsin
     let lastStatus = null;
-    const setStatus = (key, type = "") => {
+    const setStatus = (key, type = "", animate = true) => {
         lastStatus = key ? { key, type } : null;
         status.textContent = key ? t(key) : "";
         status.className = "form-status " + type;
+        if (key && animate) {
+            const from = reduceMotion ? { opacity: 0 } : { opacity: 0, transform: "translateY(4px)" };
+            status.animate([from, { opacity: 1, transform: "none" }], { duration: 200, easing: EASE_OUT });
+        }
     };
-    langListeners.push(() => { if (lastStatus) setStatus(lastStatus.key, lastStatus.type); });
+    langListeners.push(() => { if (lastStatus) setStatus(lastStatus.key, lastStatus.type, false); });
 
     form.addEventListener("input", e => e.target.closest(".field")?.classList.remove("invalid"));
 
