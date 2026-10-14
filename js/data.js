@@ -13,22 +13,10 @@ window.SITE = {
     photo: "images/profile.jpg",         // Yoksa baş harf gösterilir
     cv: { tr: "CeylinTugbaAcar_CV.pdf", en: "CeylinTugbaAcar_CV_EN.pdf" },   // Boşsa "CV İndir" gizlenir
 
-    // Hero'da sırayla yazılıp silinen ifadeler
-    typing: {
-        tr: [
-            "oyun geliştiriyorum.",
-            "web güvenliği öğreniyorum.",
-            "CTF'lerde pratik yapıyorum.",
-            "veri analizi araçları yapıyorum.",
-            "algoritmaları sıfırdan yazıyorum."
-        ],
-        en: [
-            "building games.",
-            "learning web security.",
-            "practicing in CTFs.",
-            "building data analysis tools.",
-            "writing algorithms from scratch."
-        ]
+    // Hero'nun altındaki kayan şerit
+    interests: {
+        tr: ["Oyun geliştirme", "Siber güvenlik", "Web güvenliği", "Algoritmalar", "Veri analizi", "Unity", "Python", "C / C++"],
+        en: ["Game development", "Cybersecurity", "Web security", "Algorithms", "Data analysis", "Unity", "Python", "C / C++"]
     },
 
     social: {
@@ -70,6 +58,7 @@ window.SITE = {
                 en: "A deliberately vulnerable Flask application built for learning. At each level a vulnerability is first exploited, then its secure version is written: parameterized queries against SQL Injection, automatic HTML escaping against XSS, ownership checks against IDOR and password hashing against weak password storage. For safety, it is designed to run only on the local machine."
             },
             tech: ["Python", "Flask", "SQLite", "OWASP"],
+            cover: { icon: "shield", hue: 268 },   // kart kapağı: ikon + renk tonu (0-360)
             image: "images/projects/vulnlab.webp",
             github: "https://github.com/ceylintacr/vulnlab-simulator",
             demo: ""
@@ -86,6 +75,7 @@ window.SITE = {
                 en: "A puzzle game that combines classic Sudoku with an original \"Branching\" mechanic. When unsure about a cell, the player opens a new branch and tries the guess there; if it turns out wrong, the branch is discarded and the main board stays intact. Touch-friendly, targeting WebGL and Android."
             },
             tech: ["Unity", "C#", "UI Toolkit"],
+            cover: { icon: "grid", hue: 200 },   // kart kapağı: ikon + renk tonu (0-360)
             image: "images/projects/sudoku.webp",
             github: "https://github.com/ceylintacr/Sudoku-Oyunu",
             demo: ""
@@ -102,6 +92,7 @@ window.SITE = {
                 en: "A tower defense game in which you defend the last walls against cursed undead with ancient towers. The wave system, tower placement and upgrades, enemy pathfinding and the in-game economy were built in Unity."
             },
             tech: ["Unity 2D", "C#", { tr: "Oyun Tasarımı", en: "Game Design" }],
+            cover: { icon: "castle", hue: 22 },   // kart kapağı: ikon + renk tonu (0-360)
             image: "images/projects/tower-defense.webp",
             github: "https://github.com/ceylintacr/Tower-Defense",
             demo: ""
@@ -118,6 +109,7 @@ window.SITE = {
                 en: "Unlike classic checks, it detects patterns in a password (common words, years, keyboard sequences, leet substitutions), recalculates its real entropy and estimates cracking time under different attack scenarios. The password never leaves the browser; all analysis runs locally."
             },
             tech: ["JavaScript", "HTML", "CSS"],
+            cover: { icon: "key", hue: 150 },   // kart kapağı: ikon + renk tonu (0-360)
             image: "images/projects/password-analyzer.webp",
             github: "https://github.com/ceylintacr/password-strength-analyzer",
             demo: "https://ceylintacr.github.io/password-strength-analyzer/"
@@ -134,6 +126,7 @@ window.SITE = {
                 en: "A dynamic engine that analyzes JSON (NoSQL) data of unknown structure at runtime, splits nested objects and arrays into tables, builds the relationships (foreign keys) and produces a normalized relational SQL database."
             },
             tech: ["Python", "SQL", "JSON"],
+            cover: { icon: "database", hue: 230 },   // kart kapağı: ikon + renk tonu (0-360)
             image: "images/projects/nosql-sql.webp",
             github: "https://github.com/ceylintacr/NoSQL-to-SQL",
             demo: ""
@@ -150,6 +143,7 @@ window.SITE = {
                 en: "A C# / WPF desktop application that loads and visualizes a JSON-based article citation graph and applies graph algorithms such as h-index, betweenness centrality and k-core decomposition."
             },
             tech: ["C#", "WPF", { tr: "Graf Algoritmaları", en: "Graph Algorithms" }],
+            cover: { icon: "graph", hue: 290 },   // kart kapağı: ikon + renk tonu (0-360)
             image: "images/projects/graf-analizi.webp",
             github: "https://github.com/ceylintacr/Makale-Graf-Analizi",
             demo: ""
@@ -166,6 +160,7 @@ window.SITE = {
                 en: "KNN and Decision Tree algorithms written from scratch without any libraries. A Java machine learning application with an object-oriented design that predicts product categories from customer data."
             },
             tech: ["Java", "OOP", { tr: "Makine Öğrenmesi", en: "Machine Learning" }],
+            cover: { icon: "chart", hue: 40 },   // kart kapağı: ikon + renk tonu (0-360)
             image: "images/projects/market-tahmin.webp",
             github: "https://github.com/ceylintacr/Market-Tahmin-Analizi",
             demo: ""
@@ -182,6 +177,7 @@ window.SITE = {
                 en: "A geometric analysis project that processes 2D LIDAR sensor data, detects line segments from points with the RANSAC algorithm and calculates the angles and intersections between them."
             },
             tech: ["C", "C++", "RANSAC"],
+            cover: { icon: "radar", hue: 180 },   // kart kapağı: ikon + renk tonu (0-360)
             image: "images/projects/lidar.webp",
             github: "https://github.com/ceylintacr/Lidar-Geometrik-Analiz",
             demo: ""
@@ -198,6 +194,7 @@ window.SITE = {
                 en: "A console-based text editor with a modular architecture, offering file open/save, a built-in file browser and undo support. Practice in memory management and data structures."
             },
             tech: ["C", { tr: "Veri Yapıları", en: "Data Structures" }],
+            cover: { icon: "terminal", hue: 330 },   // kart kapağı: ikon + renk tonu (0-360)
             image: "images/projects/console-notepad.webp",
             github: "https://github.com/ceylintacr/Console-Notepad",
             demo: ""

@@ -6,14 +6,14 @@ Saf HTML, CSS ve JavaScript ile yazılmış, framework gerektirmeyen kişisel po
 
 ## Özellikler
 
-- Açık / koyu tema (tercih hatırlanır, sistem temasına uyar)
+- Koyu tema, lavanta ve nane yeşili vurgular; terminal tarzı logo ve `// başlık` etiketleri
+- Açılışta "karakter seçme" ekranı gibi dönen platformda 3D karakter: 360° dönüş videosundan çıkarılan 60 karelik sprite (`images/turntable.webp`), fareyle ya da dokunarak sürüklenip çevrilebilir
+- Filtrelenebilir proje kartları ve proje detay penceresi
 - Türkçe / İngilizce dil desteği (tercih hatırlanır; `?lang=en` ile doğrudan İngilizce açılır)
-- Yazı makinesi efektli hero, mıknatıs butonlar, 3D eğilen proje kartları
-- Kategoriye göre filtrelenebilen projeler ve detay penceresi (modal)
-- Yetenekler ve eğitim/deneyim zaman çizelgesi
-- Formspree ile çalışan iletişim formu
-- Kaydırma ilerleme çubuğu, aktif menü bağlantısı, başa dön butonu
-- Mobil uyumlu menü, erişilebilirlik (klavye, odak, azaltılmış hareket), 404 sayfası
+- Koyu tema varsayılan, isteğe bağlı açık tema (tercih hatırlanır)
+- Formspree ile çalışan iletişim formu, TR ve EN CV
+- Animasyonlar Emil Kowalski'nin ilkelerine göre: kısa, amaçlı, `transform`/`opacity`; "hareketi azalt" ayarına uyar
+- Mobil uyumlu, erişilebilir (klavye, odak, ekran okuyucu), 404 sayfası
 
 ## İçeriği düzenleme
 
@@ -22,7 +22,8 @@ yetenekler, projeler ve zaman çizelgesi. Kod yazmadan sadece bu dosyayı düzen
 
 | Ne | Nereye |
 |---|---|
-| Profil fotoğrafı | `images/profile.jpg` (kare, en az 600×600 px) |
+| 3D karakter | `images/turntable.webp` (10×6 kare sprite) |
+| Oturan avatar | `images/avatar.webp` (şeffaf arka plan) |
 | CV | Kök klasördeki `CeylinTugbaAcar_CV.pdf` (TR) ve `CeylinTugbaAcar_CV_EN.pdf` (EN) |
 | Proje görseli | `images/projects/` içine koy, projenin `image` alanına yolunu yaz |
 | Hakkımda yazıları | `js/i18n.js` içindeki `about1`–`about3` |
